@@ -25,16 +25,23 @@ export default async function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Welcome back, {session.name}</h1>
           <p className="text-sm text-muted-foreground">
             Pick up where you left off — every answer feeds your progress below.
           </p>
         </div>
-        <Link href="/practice">
-          <Button size="lg">Take a practice question</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/practice">
+            <Button size="lg">Take a practice question</Button>
+          </Link>
+          <Link href="/mock/start">
+            <Button size="lg" variant="outline">
+              Start a mock exam
+            </Button>
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -65,12 +72,64 @@ export default async function Dashboard() {
             {data.recentMocks.length}
             <span className="ml-2 text-sm text-muted-foreground">
               {data.recentMocks.length === 0
-                ? "(coming soon)"
+                ? "(none yet)"
                 : "(recent shown below)"}
             </span>
           </CardContent>
         </Card>
       </div>
+
+      {data.recentMocks.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent mock exams</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <table className="w-full text-sm">
+              <thead className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+                <tr>
+                  <th className="py-2">Started</th>
+                  <th className="py-2">Status</th>
+                  <th className="py-2">Score</th>
+                  <th className="py-2">Scaled</th>
+                  <th className="py-2"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.recentMocks.map((m) => (
+                  <tr key={m.id} className="border-t border-border">
+                    <td className="py-2 tabular-nums">
+                      {new Date(m.startedAt).toLocaleString()}
+                    </td>
+                    <td className="py-2">
+                      {m.status === "submitted" ? "Submitted" : "In progress"}
+                    </td>
+                    <td className="py-2 tabular-nums">
+                      {m.rawCorrect != null ? m.rawCorrect : "—"}
+                    </td>
+                    <td className="py-2 tabular-nums">
+                      {m.scaled != null ? `${m.scaled}/1000` : "—"}
+                      {m.passed === true ? " ✓" : null}
+                    </td>
+                    <td className="py-2">
+                      <Link
+                        className="text-xs underline"
+                        href={
+                          m.status === "submitted"
+                            ? `/mock/${m.id}/results`
+                            : `/mock/${m.id}`
+                        }
+                      >
+                        {m.status === "submitted" ? "Review" : "Resume"}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader>

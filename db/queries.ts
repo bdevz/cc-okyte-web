@@ -1,9 +1,11 @@
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
+  mockAnswers,
   mockRuns,
   practiceAttempts,
   users,
+  type MockRun,
   type NewPracticeAttempt,
   type User,
 } from "./schema";
@@ -159,6 +161,116 @@ export async function questionsAttemptedByUser(userId: string): Promise<Set<stri
     .from(practiceAttempts)
     .where(eq(practiceAttempts.userId, userId));
   return new Set(rows.map((r) => r.questionId));
+}
+
+export type MockRunWithAnswers = MockRun & {
+  answers: Record<string, string>;
+};
+
+export async function createMockRun(input: {
+  id: string;
+  userId: string;
+  count: number;
+  scenarios: string[];
+  seed: number;
+  questionIds: string[];
+}): Promise<MockRun> {
+  const [row] = await db
+    .insert(mockRuns)
+    .values({
+      id: input.id,
+      userId: input.userId,
+      status: "in_progress",
+      count: input.count,
+      scenarios: input.scenarios,
+      seed: input.seed,
+      questionIds: input.questionIds,
+    })
+    .returning();
+  return row;
+}
+
+export async function getMockRun(
+  runId: string,
+  userId: string,
+): Promise<MockRunWithAnswers | null> {
+  const rows = await db
+    .select()
+    .from(mockRuns)
+    .where(and(eq(mockRuns.id, runId), eq(mockRuns.userId, userId)))
+    .limit(1);
+  const run = rows[0];
+  if (!run) return null;
+
+  const answerRows = await db
+    .select({
+      questionId: mockAnswers.questionId,
+      chosen: mockAnswers.chosen,
+    })
+    .from(mockAnswers)
+    .where(eq(mockAnswers.runId, runId));
+
+  const answers: Record<string, string> = {};
+  for (const a of answerRows) answers[a.questionId] = String(a.chosen);
+  return { ...run, answers };
+}
+
+export async function saveMockAnswer(input: {
+  runId: string;
+  userId: string;
+  questionId: string;
+  chosen: "A" | "B" | "C" | "D";
+}): Promise<{ ok: boolean }> {
+  // Confirm the run belongs to this user and is still in progress.
+  const [run] = await db
+    .select({ status: mockRuns.status })
+    .from(mockRuns)
+    .where(and(eq(mockRuns.id, input.runId), eq(mockRuns.userId, input.userId)))
+    .limit(1);
+  if (!run) return { ok: false };
+  if (run.status === "submitted") return { ok: false };
+
+  await db
+    .insert(mockAnswers)
+    .values({
+      runId: input.runId,
+      questionId: input.questionId,
+      chosen: input.chosen,
+    })
+    .onConflictDoUpdate({
+      target: [mockAnswers.runId, mockAnswers.questionId],
+      set: { chosen: input.chosen, updatedAt: new Date() },
+    });
+  return { ok: true };
+}
+
+export async function submitMockRun(input: {
+  runId: string;
+  userId: string;
+  reportJson: unknown;
+  rawCorrect: number;
+  scaled: number;
+  passed: boolean;
+}): Promise<{ ok: boolean }> {
+  const result = await db
+    .update(mockRuns)
+    .set({
+      status: "submitted",
+      submittedAt: new Date(),
+      reportJson: input.reportJson as any,
+      rawCorrect: input.rawCorrect,
+      scaled: input.scaled,
+      passed: input.passed,
+    })
+    .where(
+      and(
+        eq(mockRuns.id, input.runId),
+        eq(mockRuns.userId, input.userId),
+        eq(mockRuns.status, "in_progress"),
+      ),
+    )
+    .returning({ id: mockRuns.id });
+  return { ok: result.length > 0 };
 }
 
 export { and, eq };

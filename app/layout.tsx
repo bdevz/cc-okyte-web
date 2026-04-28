@@ -25,6 +25,9 @@ async function NavBar() {
           <Link href="/practice" className="hover:underline">
             Practice
           </Link>
+          <Link href="/mock/start" className="hover:underline">
+            Mock exam
+          </Link>
           <span className="text-muted-foreground">Hi, {session.name}</span>
           <LogoutButton />
         </nav>
