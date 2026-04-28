@@ -1,0 +1,4 @@
+[submodule "vendor/consultadd-claude-architect"]
+	path = vendor/consultadd-claude-architect
+	url = https://github.com/bdevz/elo.git
+	branch = master
