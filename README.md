@@ -6,12 +6,14 @@ Pulls study content from the [consultadd-claude-architect](https://github.com/bd
 
 ## What teammates can do
 
-- Sign in with their first name + a shared team password
+- **Sign in with any name + the shared team password.** No invite needed; new accounts are created automatically on first login. Use the same handle every time so progress sticks.
 - Take practice questions one at a time (filter by domain / scenario / difficulty)
 - Run paginated mock exams (10 questions per page, autosaved)
 - Read all the domain guides, cheatsheets, and scenario walkthroughs
 - Ask an AI coach to explain CCAF concepts (grounded in the domain guides)
 - See their own progress dashboard (accuracy by domain, recent mocks)
+
+Admin role is granted to any username listed in the `ADMIN_USERNAMES` env var (comma-separated, lowercase) — the role is applied on their next login.
 
 ## Local development
 

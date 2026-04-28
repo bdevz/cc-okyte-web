@@ -8,13 +8,40 @@ import {
   type User,
 } from "./schema";
 
-export async function getUserByUsername(username: string): Promise<User | null> {
-  const rows = await db
+export async function getOrCreateUser(input: {
+  username: string;
+  displayName: string;
+  role: "user" | "admin";
+}): Promise<User> {
+  const username = input.username.toLowerCase();
+  await db
+    .insert(users)
+    .values({
+      username,
+      displayName: input.displayName,
+      role: input.role,
+    })
+    .onConflictDoNothing({ target: users.username });
+
+  // Always upgrade role if the env-driven admin list now includes them, but
+  // never downgrade — once an admin, removing from ADMIN_USERNAMES does not
+  // strip the role (do that explicitly via the admin UI when it ships).
+  if (input.role === "admin") {
+    await db
+      .update(users)
+      .set({ role: "admin" })
+      .where(eq(users.username, username));
+  }
+
+  const [row] = await db
     .select()
     .from(users)
-    .where(eq(sql`lower(${users.username})`, username.toLowerCase()))
+    .where(eq(users.username, username))
     .limit(1);
-  return rows[0] ?? null;
+  if (!row) {
+    throw new Error(`Failed to upsert user '${username}'`);
+  }
+  return row;
 }
 
 export async function recordPracticeAttempt(input: NewPracticeAttempt) {

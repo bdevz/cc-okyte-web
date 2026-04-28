@@ -1,10 +1,11 @@
 /**
- * Whitelist of teammates allowed to sign in. The login flow looks up by
- * username (case-insensitive) and then verifies the shared team password.
+ * Optional pre-seed. With the open-signup flow, new teammates create their
+ * own account on first login (any name + the team password). This file only
+ * exists so admin accounts can be guaranteed to exist before anyone logs in,
+ * which is useful for the very first deploy.
  *
- * Edit this file and re-run `npm run db:seed` to add or remove people.
- * Removing a person here does NOT delete their data — set role: 'user' or
- * remove via the admin UI when that ships.
+ * The runtime auth flow ALSO promotes anyone whose lowercase username is in
+ * the ADMIN_USERNAMES env var, so seeding here is not strictly required.
  */
 export type SeedUser = {
   username: string;
@@ -13,11 +14,5 @@ export type SeedUser = {
 };
 
 export const USERS: SeedUser[] = [
-  // The first admin. Replace with your team list.
   { username: "jason", displayName: "Jason", role: "admin" },
-
-  // TODO(setup): replace these placeholders with your 10 non-tech teammates.
-  // { username: "alex",   displayName: "Alex Doe",   role: "user" },
-  // { username: "sam",    displayName: "Sam Lee",    role: "user" },
-  // ...
 ];

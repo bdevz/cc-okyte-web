@@ -52,8 +52,12 @@ export function LoginForm({
           required
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          placeholder="e.g. alex"
+          placeholder="e.g. alex.smith"
         />
+        <p className="text-xs text-muted-foreground">
+          Use a unique handle (e.g. <code>alex.smith</code>) so two people
+          named &ldquo;Alex&rdquo; don&apos;t share a progress record.
+        </p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Team password</Label>

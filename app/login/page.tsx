@@ -14,7 +14,8 @@ export default async function LoginPage({
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-semibold">Welcome to CCAF Study</h1>
         <p className="text-sm text-muted-foreground">
-          Sign in with your first name and the team password.
+          Type a name (any name works) and the team password.
+          Use the same name every time so your progress sticks.
         </p>
       </div>
       <LoginForm next={searchParams.next} error={searchParams.error} />
