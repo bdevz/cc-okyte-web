@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "installCommand": "git submodule update --init --recursive && npm ci",
+  "installCommand": "([ -d vendor/consultadd-claude-architect/.git ] || git clone --depth 1 https://github.com/bdevz/elo.git vendor/consultadd-claude-architect) && npm ci",
   "buildCommand": "npm run build"
 }
