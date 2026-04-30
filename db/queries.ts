@@ -2,13 +2,16 @@ import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   generatedQuestions,
+  learningResources,
   mockAnswers,
   mockRuns,
   practiceAttempts,
   users,
   type GeneratedQuestion,
+  type LearningResource,
   type MockRun,
   type NewGeneratedQuestion,
+  type NewLearningResource,
   type NewPracticeAttempt,
   type User,
 } from "./schema";
@@ -410,6 +413,76 @@ export async function reviewGeneratedQuestion(input: {
     )
     .returning({ id: generatedQuestions.id });
   return { ok: result.length > 0 };
+}
+
+export async function insertLearningResources(
+  rows: NewLearningResource[],
+): Promise<LearningResource[]> {
+  if (rows.length === 0) return [];
+  return db.insert(learningResources).values(rows).returning();
+}
+
+export async function listLearningResources(opts?: {
+  status?: "pending_review" | "approved" | "rejected";
+  domain?: number;
+  limit?: number;
+}): Promise<LearningResource[]> {
+  const where = [] as any[];
+  if (opts?.status) where.push(eq(learningResources.status, opts.status));
+  if (opts?.domain !== undefined) {
+    where.push(sql`${opts.domain} = ANY(${learningResources.domains})`);
+  }
+  const q = db
+    .select()
+    .from(learningResources)
+    .where(where.length ? and(...where) : undefined)
+    .orderBy(desc(learningResources.createdAt));
+  return opts?.limit ? q.limit(opts.limit) : q;
+}
+
+export async function listResourcesForQuestion(input: {
+  domains: readonly number[];
+  taskStatements: readonly string[];
+  limit?: number;
+}): Promise<LearningResource[]> {
+  const limit = input.limit ?? 3;
+  if (input.domains.length === 0 && input.taskStatements.length === 0) {
+    return [];
+  }
+  const rows = await db.execute<LearningResource>(sql`
+    SELECT * FROM ${learningResources}
+    WHERE ${learningResources.status} = 'approved'
+      AND (
+        ${learningResources.domains} && ${sql.raw(`ARRAY[${input.domains.join(",")}]::int[]`)}
+        ${input.taskStatements.length > 0
+          ? sql`OR ${learningResources.taskStatements} && ${sql.raw(`ARRAY[${input.taskStatements.map((t) => `'${t}'`).join(",")}]::text[]`)}`
+          : sql``}
+      )
+    ORDER BY ${learningResources.createdAt} DESC
+    LIMIT ${limit}
+  `);
+  return rows.rows as LearningResource[];
+}
+
+export async function reviewLearningResource(input: {
+  id: string;
+  reviewerId: string;
+  decision: "approved" | "rejected";
+}): Promise<{ ok: boolean }> {
+  const result = await db
+    .update(learningResources)
+    .set({
+      status: input.decision,
+      reviewedBy: input.reviewerId,
+      reviewedAt: new Date(),
+    })
+    .where(eq(learningResources.id, input.id))
+    .returning({ id: learningResources.id });
+  return { ok: result.length > 0 };
+}
+
+export async function deleteLearningResource(id: string) {
+  await db.delete(learningResources).where(eq(learningResources.id, id));
 }
 
 export { and, eq, inArray };

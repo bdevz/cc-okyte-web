@@ -118,6 +118,46 @@ export const generatedQuestions = pgTable(
   }),
 );
 
+export const learningResources = pgTable(
+  "learning_resources",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    title: text("title").notNull(),
+    url: text("url").notNull(),
+    description: text("description"),
+    type: text("type", {
+      enum: ["video", "doc", "blog", "scenario", "course", "other"],
+    }).notNull().default("doc"),
+    domains: integer("domains").array().notNull().default([]),
+    taskStatements: text("task_statements").array().notNull().default([]),
+    tags: text("tags").array().notNull().default([]),
+    status: text("status", {
+      enum: ["pending_review", "approved", "rejected"],
+    })
+      .notNull()
+      .default("approved"),
+    source: text("source", {
+      enum: ["admin", "claude-suggested"],
+    })
+      .notNull()
+      .default("admin"),
+    addedBy: uuid("added_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    statusIdx: index("learning_resources_status_idx").on(t.status),
+    createdIdx: index("learning_resources_created_idx").on(t.createdAt),
+  }),
+);
+
 export const coachMessages = pgTable(
   "coach_messages",
   {
@@ -142,3 +182,5 @@ export type MockRun = typeof mockRuns.$inferSelect;
 export type CoachMessage = typeof coachMessages.$inferSelect;
 export type GeneratedQuestion = typeof generatedQuestions.$inferSelect;
 export type NewGeneratedQuestion = typeof generatedQuestions.$inferInsert;
+export type LearningResource = typeof learningResources.$inferSelect;
+export type NewLearningResource = typeof learningResources.$inferInsert;

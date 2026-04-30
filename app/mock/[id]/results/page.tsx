@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { getMockRun } from "@/db/queries";
+import { getMockRun, listResourcesForQuestion } from "@/db/queries";
 import { getRuntimeQuestionById } from "@/lib/runtime-pool";
+import { RelatedResources } from "@/components/RelatedResources";
 import type { ScoreReport } from "@/lib/scorer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -163,7 +164,7 @@ export default async function MockResultsPage({
           <CardHeader>
             <CardTitle>Where to focus next</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <p className="text-sm">
               Your accuracy was lowest on{" "}
               <strong>
@@ -174,6 +175,24 @@ export default async function MockResultsPage({
               . Re-read those domain guides and run a few practice questions filtered
               to those domains.
             </p>
+            {await Promise.all(
+              report.weakestDomains.map(async (d) => {
+                const resources = await listResourcesForQuestion({
+                  domains: [d],
+                  taskStatements: [],
+                  limit: 3,
+                });
+                if (resources.length === 0) return null;
+                return (
+                  <div key={d}>
+                    <RelatedResources
+                      resources={resources}
+                      title={`Resources for D${d}`}
+                    />
+                  </div>
+                );
+              }),
+            )}
           </CardContent>
         </Card>
       ) : null}

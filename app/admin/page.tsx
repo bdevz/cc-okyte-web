@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { listPendingGeneratedQuestions } from "@/db/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { GenerateForm } from "./GenerateForm";
 import { PendingReviewList } from "./PendingReviewList";
 import { ALL_DIFFICULTIES, ALL_SCENARIOS } from "@/lib/content";
@@ -17,13 +19,18 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="text-sm text-muted-foreground">
-          Generate new practice questions with Claude and review them before they
-          enter the live bank. Approved questions appear in everyone&apos;s
-          practice and mock-exam pools immediately.
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Admin</h1>
+          <p className="text-sm text-muted-foreground">
+            Generate new practice questions with Claude and review them before
+            they enter the live bank. Approved questions appear in
+            everyone&apos;s practice and mock-exam pools immediately.
+          </p>
+        </div>
+        <Link href="/admin/resources">
+          <Button variant="outline">Learning resources →</Button>
+        </Link>
       </div>
 
       <Card>

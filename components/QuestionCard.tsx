@@ -1,9 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Question, Letter } from "@/lib/content";
+import type { LearningResource } from "@/db/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { MarkdownView } from "@/components/MarkdownView";
+import { RelatedResources } from "@/components/RelatedResources";
 import { cn } from "@/lib/utils";
 
 const DOMAIN_LABEL: Record<number, string> = {
@@ -27,8 +29,30 @@ export function QuestionCard({
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [related, setRelated] = useState<LearningResource[] | null>(null);
 
   const isCorrect = submitted && chosen === question.correct;
+
+  useEffect(() => {
+    if (!submitted || isCorrect) return;
+    const params = new URLSearchParams();
+    params.set("domains", question.domains.join(","));
+    if (question.task_statements.length > 0) {
+      params.set("tasks", question.task_statements.join(","));
+    }
+    let cancelled = false;
+    fetch(`/api/practice/related?${params}`)
+      .then((res) => (res.ok ? res.json() : { resources: [] }))
+      .then((data) => {
+        if (!cancelled) setRelated(data.resources ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setRelated([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [submitted, isCorrect, question.domains, question.task_statements]);
 
   async function submit() {
     if (!chosen) return;
@@ -166,6 +190,13 @@ export function QuestionCard({
               <h3 className="text-sm font-semibold">Why this question matters</h3>
               <MarkdownView body={question.teaches} className="text-sm" />
             </div>
+
+            {!isCorrect && related ? (
+              <RelatedResources
+                resources={related}
+                title="Learn more about this topic"
+              />
+            ) : null}
 
             {onNext ? (
               <Button variant="outline" onClick={onNext}>
