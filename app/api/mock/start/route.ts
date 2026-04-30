@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { nanoid } from "nanoid";
 import { getSession } from "@/lib/session";
-import { ALL_SCENARIOS, getApprovedQuestions } from "@/lib/content";
+import { ALL_SCENARIOS } from "@/lib/content";
+import { getRuntimeQuestionPool } from "@/lib/runtime-pool";
 import { selectMockQuestions } from "@/lib/selector";
 import { createMockRun } from "@/db/queries";
 
@@ -35,8 +36,9 @@ export async function POST(req: Request) {
   const scenarios = parsed.data.scenarios ?? [];
   const seed = Math.floor(Math.random() * 0xffffffff);
 
+  const pool = await getRuntimeQuestionPool();
   const result = selectMockQuestions({
-    pool: getApprovedQuestions(),
+    pool,
     count: requestedCount,
     scenarios: scenarios as any,
     seed,

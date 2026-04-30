@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getSession } from "@/lib/session";
-import { getQuestionById } from "@/lib/content";
+import { getRuntimeQuestionById } from "@/lib/runtime-pool";
 import { recordPracticeAttempt } from "@/db/queries";
 
 export const runtime = "nodejs";
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
   const { questionId, chosen } = parsed.data;
 
-  const question = getQuestionById(questionId);
+  const question = await getRuntimeQuestionById(questionId);
   if (!question) {
     return NextResponse.json(
       { ok: false, message: "Unknown question" },

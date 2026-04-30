@@ -1,4 +1,6 @@
-import "dotenv/config";
+import * as dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import { sql } from "drizzle-orm";
 import { db } from "./client";
 import { users } from "./schema";

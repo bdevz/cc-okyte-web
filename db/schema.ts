@@ -79,6 +79,45 @@ export const mockAnswers = pgTable(
   }),
 );
 
+export const generatedQuestions = pgTable(
+  "generated_questions",
+  {
+    id: text("id").primaryKey(),
+    scenario: text("scenario").notNull(),
+    domains: integer("domains").array().notNull(),
+    taskStatements: text("task_statements").array().notNull(),
+    difficulty: text("difficulty", {
+      enum: ["easy", "medium", "hard"],
+    }).notNull(),
+    tags: text("tags").array().notNull().default([]),
+    source: text("source").notNull().default("claude-generated"),
+    correct: char("correct", { length: 1 }).notNull(),
+    status: text("status", {
+      enum: ["pending_review", "approved", "rejected"],
+    })
+      .notNull()
+      .default("pending_review"),
+    stem: text("stem").notNull(),
+    optionsJson: jsonb("options_json").notNull(),
+    teaches: text("teaches").notNull(),
+    generationModel: text("generation_model").notNull(),
+    generationBatchId: text("generation_batch_id").notNull(),
+    reviewedBy: uuid("reviewed_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    rejectionReason: text("rejection_reason"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => ({
+    statusIdx: index("generated_questions_status_idx").on(t.status),
+    scenarioIdx: index("generated_questions_scenario_idx").on(t.scenario),
+    batchIdx: index("generated_questions_batch_idx").on(t.generationBatchId),
+  }),
+);
+
 export const coachMessages = pgTable(
   "coach_messages",
   {
@@ -101,3 +140,5 @@ export type PracticeAttempt = typeof practiceAttempts.$inferSelect;
 export type NewPracticeAttempt = typeof practiceAttempts.$inferInsert;
 export type MockRun = typeof mockRuns.$inferSelect;
 export type CoachMessage = typeof coachMessages.$inferSelect;
+export type GeneratedQuestion = typeof generatedQuestions.$inferSelect;
+export type NewGeneratedQuestion = typeof generatedQuestions.$inferInsert;

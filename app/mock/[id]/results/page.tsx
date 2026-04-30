@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getMockRun } from "@/db/queries";
-import { getQuestionById } from "@/lib/content";
+import { getRuntimeQuestionById } from "@/lib/runtime-pool";
 import type { ScoreReport } from "@/lib/scorer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,9 +185,10 @@ export default async function MockResultsPage({
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm">
-              {report.incorrect.map((row) => {
-                const q = getQuestionById(row.id);
-                return (
+              {await Promise.all(
+                report.incorrect.map(async (row) => {
+                  const q = await getRuntimeQuestionById(row.id);
+                  return (
                   <li key={row.id} className="flex items-start gap-3">
                     <span className="w-10 tabular-nums text-muted-foreground">
                       Q{row.number}
@@ -219,7 +220,8 @@ export default async function MockResultsPage({
                     </div>
                   </li>
                 );
-              })}
+                }),
+              )}
             </ul>
           </CardContent>
         </Card>

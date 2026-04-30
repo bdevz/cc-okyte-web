@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/session";
-import { getQuestionById, type Letter } from "@/lib/content";
+import { type Letter } from "@/lib/content";
+import { getRuntimeQuestionById } from "@/lib/runtime-pool";
 import { scoreMock } from "@/lib/scorer";
 import { getMockRun, submitMockRun } from "@/db/queries";
 
@@ -26,13 +27,15 @@ export async function POST(
     );
   }
 
-  const questions = run.questionIds.map((id) => {
-    const q = getQuestionById(id);
-    if (!q) {
-      throw new Error(`Mock run ${run.id} references unknown question ${id}`);
-    }
-    return q;
-  });
+  const questions = await Promise.all(
+    run.questionIds.map(async (id) => {
+      const q = await getRuntimeQuestionById(id);
+      if (!q) {
+        throw new Error(`Mock run ${run.id} references unknown question ${id}`);
+      }
+      return q;
+    }),
+  );
 
   const answers: (Letter | null)[] = questions.map((q) => {
     const a = run.answers[q.id];

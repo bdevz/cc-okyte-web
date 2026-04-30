@@ -1,14 +1,23 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
+  generatedQuestions,
   mockAnswers,
   mockRuns,
   practiceAttempts,
   users,
+  type GeneratedQuestion,
   type MockRun,
+  type NewGeneratedQuestion,
   type NewPracticeAttempt,
   type User,
 } from "./schema";
+import {
+  QuestionSchema,
+  getQuestions as getStaticQuestions,
+  type Question,
+  type Scenario,
+} from "@/lib/content";
 
 export async function getOrCreateUser(input: {
   username: string;
@@ -273,4 +282,134 @@ export async function submitMockRun(input: {
   return { ok: result.length > 0 };
 }
 
-export { and, eq };
+export const SCENARIO_TO_PREFIX: Record<Scenario, string> = {
+  "customer-support": "cs",
+  "code-generation": "cg",
+  "multi-agent-research": "mar",
+  "developer-productivity": "dp",
+  "ci-cd": "cicd",
+  "structured-data-extraction": "sde",
+};
+
+function generatedRowToQuestion(row: GeneratedQuestion): Question | null {
+  const candidate = {
+    id: row.id,
+    scenario: row.scenario,
+    domains: row.domains,
+    task_statements: row.taskStatements,
+    difficulty: row.difficulty,
+    tags: row.tags,
+    source: row.source,
+    correct: row.correct,
+    review_status: row.status === "approved" ? "approved" : "pending",
+    stem: row.stem,
+    options: row.optionsJson,
+    teaches: row.teaches,
+    sourcePath: `db:generated_questions/${row.id}`,
+  };
+  const parsed = QuestionSchema.safeParse(candidate);
+  if (!parsed.success) {
+    console.error(
+      `[queries] generated question ${row.id} failed Zod validation:`,
+      parsed.error.flatten(),
+    );
+    return null;
+  }
+  return parsed.data;
+}
+
+export async function listApprovedGeneratedQuestions(): Promise<Question[]> {
+  const rows = await db
+    .select()
+    .from(generatedQuestions)
+    .where(eq(generatedQuestions.status, "approved"));
+  return rows
+    .map(generatedRowToQuestion)
+    .filter((q): q is Question => q !== null);
+}
+
+export async function getGeneratedQuestionById(
+  id: string,
+): Promise<Question | null> {
+  const rows = await db
+    .select()
+    .from(generatedQuestions)
+    .where(eq(generatedQuestions.id, id))
+    .limit(1);
+  if (!rows[0]) return null;
+  return generatedRowToQuestion(rows[0]);
+}
+
+export async function listPendingGeneratedQuestions(): Promise<
+  GeneratedQuestion[]
+> {
+  return db
+    .select()
+    .from(generatedQuestions)
+    .where(eq(generatedQuestions.status, "pending_review"))
+    .orderBy(desc(generatedQuestions.createdAt));
+}
+
+export async function nextQuestionId(scenario: Scenario): Promise<string> {
+  const prefix = SCENARIO_TO_PREFIX[scenario];
+  if (!prefix) throw new Error(`Unknown scenario ${scenario}`);
+  const re = new RegExp(`^q-${prefix}-(\\d{3})$`);
+
+  // Static IDs from the compiled bundle.
+  let max = 0;
+  for (const q of getStaticQuestions()) {
+    const m = re.exec(q.id);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+
+  // DB IDs across all statuses (so we don't reuse IDs we already issued).
+  const dbRows = await db
+    .select({ id: generatedQuestions.id })
+    .from(generatedQuestions)
+    .where(sql`${generatedQuestions.id} LIKE ${`q-${prefix}-%`}`);
+  for (const r of dbRows) {
+    const m = re.exec(r.id);
+    if (m) max = Math.max(max, Number(m[1]));
+  }
+
+  const next = max + 1;
+  if (next > 999) {
+    throw new Error(
+      `Question ID space for prefix ${prefix} is exhausted (3 digits)`,
+    );
+  }
+  return `q-${prefix}-${String(next).padStart(3, "0")}`;
+}
+
+export async function insertGeneratedQuestions(
+  rows: NewGeneratedQuestion[],
+): Promise<void> {
+  if (rows.length === 0) return;
+  await db.insert(generatedQuestions).values(rows);
+}
+
+export async function reviewGeneratedQuestion(input: {
+  id: string;
+  reviewerId: string;
+  decision: "approved" | "rejected";
+  reason?: string;
+}): Promise<{ ok: boolean }> {
+  const result = await db
+    .update(generatedQuestions)
+    .set({
+      status: input.decision,
+      reviewedBy: input.reviewerId,
+      reviewedAt: new Date(),
+      rejectionReason: input.decision === "rejected" ? input.reason ?? null : null,
+    })
+    .where(
+      and(
+        eq(generatedQuestions.id, input.id),
+        eq(generatedQuestions.status, "pending_review"),
+      ),
+    )
+    .returning({ id: generatedQuestions.id });
+  return { ok: result.length > 0 };
+}
+
+export { and, eq, inArray };

@@ -28,6 +28,11 @@ async function NavBar() {
           <Link href="/mock/start" className="hover:underline">
             Mock exam
           </Link>
+          {session.role === "admin" ? (
+            <Link href="/admin" className="hover:underline text-muted-foreground">
+              Admin
+            </Link>
+          ) : null}
           <span className="text-muted-foreground">Hi, {session.name}</span>
           <LogoutButton />
         </nav>

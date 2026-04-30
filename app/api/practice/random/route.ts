@@ -4,9 +4,9 @@ import { getSession } from "@/lib/session";
 import {
   ALL_DIFFICULTIES,
   ALL_SCENARIOS,
-  getApprovedQuestions,
   type Question,
 } from "@/lib/content";
+import { getRuntimeQuestionPool } from "@/lib/runtime-pool";
 import { questionsAttemptedByUser } from "@/db/queries";
 
 export const runtime = "nodejs";
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   }
   const { scenario, difficulty, domain, unseen } = parsed.data;
 
-  let pool: Question[] = getApprovedQuestions();
+  let pool: Question[] = await getRuntimeQuestionPool();
   if (scenario) pool = pool.filter((q) => q.scenario === scenario);
   if (difficulty) pool = pool.filter((q) => q.difficulty === difficulty);
   if (domain) pool = pool.filter((q) => q.domains.includes(Number(domain)));

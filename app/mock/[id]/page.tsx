@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getMockRun } from "@/db/queries";
-import { getQuestionById, type Question } from "@/lib/content";
+import { type Question } from "@/lib/content";
+import { getRuntimeQuestionById } from "@/lib/runtime-pool";
 import { ExamRunner } from "./ExamRunner";
 
 export const dynamic = "force-dynamic";
@@ -24,15 +25,17 @@ export default async function MockRunPage({
   // Materialize the run's question list at render time. Build fails if any
   // referenced question went missing, which is the right blast radius — the
   // exam mid-flight should never silently degrade.
-  const questions: Question[] = run.questionIds.map((id) => {
-    const q = getQuestionById(id);
-    if (!q) {
-      throw new Error(
-        `Mock run ${run.id} references unknown question ${id}; rebuild the content bundle.`,
-      );
-    }
-    return q;
-  });
+  const questions: Question[] = await Promise.all(
+    run.questionIds.map(async (id) => {
+      const q = await getRuntimeQuestionById(id);
+      if (!q) {
+        throw new Error(
+          `Mock run ${run.id} references unknown question ${id}; rebuild the content bundle.`,
+        );
+      }
+      return q;
+    }),
+  );
 
   const startedAt = new Date(run.startedAt);
 
